@@ -9,6 +9,12 @@ use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
 
 /**
+ * Client for the self-hosted IPQuery geo service.
+ *
+ * `lookup()` accepts both IPv4 and IPv6 addresses (as the server does); input
+ * that is not a valid IP address is rejected with {@see InvalidIpException}
+ * before an HTTP request is made.
+ *
  * @psalm-import-type TIPQueryResult from LookupInterface
  */
 final readonly class IPQueryClient implements LookupInterface
@@ -22,11 +28,16 @@ final readonly class IPQueryClient implements LookupInterface
     /**
      * @return TIPQueryResult
      *
+     * @throws InvalidIpException when $ip is not a valid IP address
      * @throws LookupException
      */
     #[\Override]
     public function lookup(string $ip): array
     {
+        if (false === \filter_var($ip, \FILTER_VALIDATE_IP)) {
+            throw InvalidIpException::forIp($ip);
+        }
+
         return $this->fetchResult('/lookup/'.\rawurlencode($ip), \sprintf('for "%s"', $ip));
     }
 

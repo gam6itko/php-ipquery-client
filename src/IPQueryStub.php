@@ -14,23 +14,23 @@ namespace Gam6itko\IPQuery;
 final readonly class IPQueryStub implements LookupInterface
 {
     /**
-     * @param TIPQueryResult|\Throwable $result the value lookup() will return,
-     *                                          or the exception it will throw
+     * @param TIPQueryResult|LookupException $result the value lookup() will return,
+     *                                               or the exception it will throw
      */
     public function __construct(
-        private array|\Throwable $result,
+        private array|LookupException $result,
     ) {
     }
 
     /**
      * @return TIPQueryResult
      *
-     * @throws \Throwable
+     * @throws LookupException
      */
     #[\Override]
     public function lookup(string $ip): array
     {
-        if ($this->result instanceof \Throwable) {
+        if ($this->result instanceof LookupException) {
             throw $this->result;
         }
 

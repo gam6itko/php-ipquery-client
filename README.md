@@ -41,7 +41,7 @@ $client = new IPQueryClient(
     requestFactory: new IPQueryRequestFactory($psr17, $psr17, 'http://localhost:8080'),
 );
 
-$result = $client->lookup('8.8.8.8'); // throws Gam6itko\IPQuery\LookupException on failure
+$result = $client->lookup('8.8.8.8'); // IPv4 or IPv6; throws Gam6itko\IPQuery\LookupException on failure
 echo $result['location']['country_code']; // ISO 3166-1 alpha-2 in UPPER case, e.g. "US"
 
 // Caller's own IP as seen by the geo service:
@@ -62,9 +62,18 @@ $client->ownIp(); // just the IP string (GET /own)
 
 ### Error handling
 
-Every failure (transport error, non-200 status, invalid JSON, unexpected payload) throws
-`Gam6itko\IPQuery\LookupException`. For an unexpected HTTP status the code is available via
-`getStatusCode()` (null for transport/parsing failures):
+Every failure throws an exception implementing `Gam6itko\IPQuery\ExceptionInterface`:
+
+```
+ExceptionInterface (\Throwable)
+└── LookupException      transport error, non-200 status, invalid JSON, unexpected payload
+    └── InvalidIpException  $ip is not a valid IP address (thrown before any HTTP request)
+```
+
+`lookup()` accepts both **IPv4 and IPv6** — a string that is not a valid IP address is rejected up
+front with `InvalidIpException` (a `LookupException`, so existing `catch` blocks keep working). For an
+unexpected HTTP status the code is available via `getStatusCode()` (null for transport/parsing/
+validation failures):
 
 ```php
 try {

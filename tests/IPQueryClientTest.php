@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Gam6itko\IPQuery\Tests;
 
+use Gam6itko\IPQuery\InvalidIpException;
 use Gam6itko\IPQuery\IPQueryClient;
 use Gam6itko\IPQuery\IPQueryRequestFactory;
 use Gam6itko\IPQuery\LookupException;
 use Gam6itko\IPQuery\Tests\Fixture\RecordingClient;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Client\ClientInterface;
@@ -31,6 +33,73 @@ final class IPQueryClientTest extends TestCase
         self::assertSame('RU', $result['location']['country_code']);
         self::assertSame('8.8.8.8', $result['ip']);
         $this->assertRequested('GET', 'http://ip-query:8080/lookup/8.8.8.8');
+    }
+
+    #[DataProvider('dataValidIp')]
+    public function testAcceptsValidIp(string $ip, string $expectedPath): void
+    {
+        $client = $this->makeClient(200, self::payloadJson('DE'));
+
+        $result = $client->lookup($ip);
+
+        self::assertSame('DE', $result['location']['country_code']);
+        $this->assertRequested('GET', 'http://ip-query:8080'.$expectedPath);
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function dataValidIp(): iterable
+    {
+        yield 'ipv4'                  => ['8.8.8.8', '/lookup/8.8.8.8'];
+        yield 'ipv4 boundary'         => ['255.255.255.255', '/lookup/255.255.255.255'];
+        yield 'ipv4 zeros'            => ['0.0.0.0', '/lookup/0.0.0.0'];
+        // IPv6 colons must be percent-encoded in the request path.
+        yield 'ipv6'                  => ['2001:db8::1', '/lookup/2001%3Adb8%3A%3A1'];
+        yield 'ipv6 full'             => ['2001:0db8:0000:0000:0000:0000:0000:0001', '/lookup/2001%3A0db8%3A0000%3A0000%3A0000%3A0000%3A0000%3A0001'];
+        yield 'ipv6 loopback'         => ['::1', '/lookup/%3A%3A1'];
+        yield 'ipv4-mapped ipv6'      => ['::ffff:192.0.2.1', '/lookup/%3A%3Affff%3A192.0.2.1'];
+    }
+
+    #[DataProvider('dataInvalidIp')]
+    public function testRejectsInvalidIp(string $ip): void
+    {
+        $client = $this->makeClient(200, self::payloadJson('RU'));
+
+        try {
+            $client->lookup($ip);
+            self::fail('InvalidIpException was not thrown');
+        } catch (InvalidIpException $e) {
+            self::assertInstanceOf(LookupException::class, $e);
+            self::assertStringContainsString('Invalid IP address', $e->getMessage());
+            self::assertStringContainsString($ip, $e->getMessage());
+        }
+
+        // No request must reach the geo service for an invalid IP.
+        self::assertNull($this->http?->lastRequest);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function dataInvalidIp(): iterable
+    {
+        yield 'empty'            => [''];
+        yield 'whitespace'       => [' '];
+        yield 'garbage'          => ['not-an-ip'];
+        yield 'hostname'         => ['example.com'];
+        yield 'partial'          => ['8.8.8'];
+        yield 'trailing dot'     => ['8.8.8.8.'];
+        yield 'leading space'    => [' 8.8.8.8'];
+        yield 'trailing space'   => ['8.8.8.8 '];
+        yield 'octet overflow'   => ['256.0.0.1'];
+        yield 'out of range'     => ['999.999.999.999'];
+        yield 'negative octet'   => ['-1.0.0.0'];
+        yield 'cidr'             => ['8.8.8.0/24'];
+        yield 'ipv4 with port'   => ['8.8.8.8:80'];
+        yield 'url'              => ['http://8.8.8.8'];
+        yield 'malformed ipv6'   => ['2001:db8:::1'];
+        yield 'ipv6 with zone'   => ['fe80::1%eth0'];
     }
 
     public function testOwnReturnsDecodedPayload(): void

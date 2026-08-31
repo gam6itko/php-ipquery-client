@@ -39,7 +39,10 @@ namespace Gam6itko\IPQuery;
 interface LookupInterface
 {
     /**
-     * Resolves geo data for the given IP address.
+     * Resolves geo data for the given IP address (IPv4 or IPv6).
+     *
+     * Implementations may reject a string that is not a valid IP address
+     * with {@see InvalidIpException}.
      *
      * `location.country_code` is an ISO 3166-1 alpha-2 code in UPPER case
      * (as returned by the geo service), or an empty string when the country
@@ -47,7 +50,7 @@ interface LookupInterface
      *
      * @return TIPQueryResult
      *
-     * @throws LookupException when the request fails or the response is malformed
+     * @throws LookupException when the IP is invalid, the request fails, or the response is malformed
      */
     public function lookup(string $ip): array;
 }

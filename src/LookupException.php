@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Gam6itko\IPQuery;
 
-final class LookupException extends \RuntimeException
+class LookupException extends \RuntimeException implements ExceptionInterface
 {
     /**
      * @param int|null $statusCode HTTP status code, when the failure was an unexpected response status
