@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Static analysis (psalm)
+        run: composer psalm
+
+      - name: Code style (php-cs-fixer)
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff
+
+      - name: Tests (phpunit)
+        run: composer tests

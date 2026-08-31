@@ -1,0 +1,107 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Gam6itko\IPQuery;
+
+use Psr\Http\Client\ClientExceptionInterface;
+use Psr\Http\Client\ClientInterface;
+use Psr\Http\Message\RequestFactoryInterface;
+
+/**
+ * @psalm-import-type TIPQueryResult from LookupInterface
+ */
+final readonly class IPQueryClient implements LookupInterface
+{
+    public function __construct(
+        private ClientInterface $httpClient,
+        private RequestFactoryInterface $requestFactory,
+    ) {
+    }
+
+    /**
+     * @return TIPQueryResult
+     *
+     * @throws LookupException
+     */
+    #[\Override]
+    public function lookup(string $ip): array
+    {
+        return $this->fetchResult('/lookup/'.\rawurlencode($ip), \sprintf('for "%s"', $ip));
+    }
+
+    /**
+     * Resolves geo data for the caller's own IP as seen by the geo service (`GET /own/all`).
+     *
+     * @return TIPQueryResult
+     *
+     * @throws LookupException
+     */
+    public function own(): array
+    {
+        return $this->fetchResult('/own/all', 'for own IP');
+    }
+
+    /**
+     * Returns the caller's own IP address as seen by the geo service (`GET /own`).
+     *
+     * @return non-empty-string
+     *
+     * @throws LookupException
+     */
+    public function ownIp(): string
+    {
+        // The endpoint returns the IP as plain text, sometimes wrapped in quotes.
+        $ip = \trim($this->fetchBody('/own', 'for own IP'), " \t\n\r\0\x0B\"");
+        if ('' === $ip) {
+            throw new LookupException('IPQuery returned an empty own IP');
+        }
+
+        return $ip;
+    }
+
+    /**
+     * @return TIPQueryResult
+     *
+     * @throws LookupException
+     */
+    private function fetchResult(string $path, string $subject): array
+    {
+        $body = $this->fetchBody($path, $subject);
+
+        try {
+            $data = \json_decode($body, true, flags: \JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            throw new LookupException(\sprintf('IPQuery returned invalid JSON %s: %s', $subject, $e->getMessage()), 0, $e);
+        }
+
+        if (!\is_array($data) || !isset($data['location']) || !\is_array($data['location']) || !isset($data['location']['country_code'])) {
+            throw new LookupException(\sprintf('IPQuery returned unexpected payload %s', $subject));
+        }
+
+        /** @var TIPQueryResult $result */
+        $result = $data;
+
+        return $result;
+    }
+
+    /**
+     * @throws LookupException
+     */
+    private function fetchBody(string $path, string $subject): string
+    {
+        $request = $this->requestFactory->createRequest('GET', $path);
+
+        try {
+            $response = $this->httpClient->sendRequest($request);
+        } catch (ClientExceptionInterface $e) {
+            throw new LookupException(\sprintf('IPQuery request failed %s: %s', $subject, $e->getMessage()), 0, $e);
+        }
+
+        if (200 !== $response->getStatusCode()) {
+            throw new LookupException(\sprintf('IPQuery returned status %d %s', $response->getStatusCode(), $subject));
+        }
+
+        return (string) $response->getBody();
+    }
+}
