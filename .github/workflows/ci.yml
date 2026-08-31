@@ -24,6 +24,9 @@ jobs:
           coverage: none
           tools: composer:v2
 
+      - name: Drop tools that don't support PHP 8.1/8.2 (only phpunit is needed here)
+        run: composer remove --dev --no-update infection/infection vimeo/psalm friendsofphp/php-cs-fixer
+
       - name: Install dependencies (${{ matrix.dependencies }})
         uses: ramsey/composer-install@v3
         with:
