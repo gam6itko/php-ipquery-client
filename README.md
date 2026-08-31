@@ -60,6 +60,20 @@ $client->ownIp(); // just the IP string (GET /own)
 > `own()` / `ownIp()` live on `IPQueryClient` only; `LookupInterface` (the cacheable,
 > mockable contract used via `CachedIPQuery` / `IPQueryStub`) exposes just `lookup()`.
 
+### Error handling
+
+Every failure (transport error, non-200 status, invalid JSON, unexpected payload) throws
+`Gam6itko\IPQuery\LookupException`. For an unexpected HTTP status the code is available via
+`getStatusCode()` (null for transport/parsing failures):
+
+```php
+try {
+    $client->lookup('8.8.8.8');
+} catch (\Gam6itko\IPQuery\LookupException $e) {
+    $status = $e->getStatusCode(); // e.g. 503, or null
+}
+```
+
 ### Caching
 
 `CachedIPQuery` decorates any `IPQueryInterface` with a PSR-16 cache (the IP-to-country

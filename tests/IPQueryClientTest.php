@@ -7,6 +7,7 @@ namespace Gam6itko\IPQuery\Tests;
 use Gam6itko\IPQuery\IPQueryClient;
 use Gam6itko\IPQuery\IPQueryRequestFactory;
 use Gam6itko\IPQuery\LookupException;
+use Gam6itko\IPQuery\Tests\Fixture\RecordingClient;
 use Nyholm\Psr7\Factory\Psr17Factory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +19,8 @@ use Psr\Http\Message\ResponseInterface;
 #[CoversClass(IPQueryClient::class)]
 final class IPQueryClientTest extends TestCase
 {
+    private ?RecordingClient $http = null;
+
     public function testReturnsDecodedPayloadOnSuccess(): void
     {
         $payload = self::payloadJson('RU');
@@ -27,6 +30,7 @@ final class IPQueryClientTest extends TestCase
 
         self::assertSame('RU', $result['location']['country_code']);
         self::assertSame('8.8.8.8', $result['ip']);
+        $this->assertRequested('GET', 'http://ip-query:8080/lookup/8.8.8.8');
     }
 
     public function testOwnReturnsDecodedPayload(): void
@@ -36,6 +40,7 @@ final class IPQueryClientTest extends TestCase
         $result = $client->own();
 
         self::assertSame('DE', $result['location']['country_code']);
+        $this->assertRequested('GET', 'http://ip-query:8080/own/all');
     }
 
     public function testOwnIpReturnsPlainText(): void
@@ -43,6 +48,7 @@ final class IPQueryClientTest extends TestCase
         $client = $this->makeClient(200, '203.0.113.7');
 
         self::assertSame('203.0.113.7', $client->ownIp());
+        $this->assertRequested('GET', 'http://ip-query:8080/own');
     }
 
     public function testOwnIpTrimsWhitespaceAndQuotes(): void
@@ -66,10 +72,14 @@ final class IPQueryClientTest extends TestCase
     {
         $client = $this->makeClient(503, '');
 
-        $this->expectException(LookupException::class);
-        $this->expectExceptionMessage('IPQuery returned status 503');
-
-        $client->lookup('8.8.8.8');
+        try {
+            $client->lookup('8.8.8.8');
+            self::fail('LookupException was not thrown');
+        } catch (LookupException $e) {
+            self::assertStringContainsString('IPQuery returned status 503', $e->getMessage());
+            // The HTTP status is exposed for programmatic handling.
+            self::assertSame(503, $e->getStatusCode());
+        }
     }
 
     public function testWrapsClientException(): void
@@ -116,19 +126,18 @@ final class IPQueryClientTest extends TestCase
         $response = $psr17->createResponse($status)
             ->withBody($psr17->createStream($body));
 
-        $httpClient = new class($response) implements ClientInterface {
-            public function __construct(private readonly ResponseInterface $response)
-            {
-            }
+        $this->http = new RecordingClient($response);
 
-            #[\Override]
-            public function sendRequest(RequestInterface $request): ResponseInterface
-            {
-                return $this->response;
-            }
-        };
+        return new IPQueryClient($this->http, $this->makeRequestFactory());
+    }
 
-        return new IPQueryClient($httpClient, $this->makeRequestFactory());
+    private function assertRequested(string $method, string $uri): void
+    {
+        self::assertNotNull($this->http, 'makeClient() was not called');
+        $request = $this->http->lastRequest;
+        self::assertNotNull($request, 'No request was sent');
+        self::assertSame($method, $request->getMethod());
+        self::assertSame($uri, (string) $request->getUri());
     }
 
     private function makeRequestFactory(): IPQueryRequestFactory

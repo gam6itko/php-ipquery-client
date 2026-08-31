@@ -72,7 +72,7 @@ final readonly class IPQueryClient implements LookupInterface
         try {
             $data = \json_decode($body, true, flags: \JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
-            throw new LookupException(\sprintf('IPQuery returned invalid JSON %s: %s', $subject, $e->getMessage()), 0, $e);
+            throw new LookupException(\sprintf('IPQuery returned invalid JSON %s: %s', $subject, $e->getMessage()), $e);
         }
 
         if (!\is_array($data) || !isset($data['location']) || !\is_array($data['location']) || !isset($data['location']['country_code'])) {
@@ -95,11 +95,12 @@ final readonly class IPQueryClient implements LookupInterface
         try {
             $response = $this->httpClient->sendRequest($request);
         } catch (ClientExceptionInterface $e) {
-            throw new LookupException(\sprintf('IPQuery request failed %s: %s', $subject, $e->getMessage()), 0, $e);
+            throw new LookupException(\sprintf('IPQuery request failed %s: %s', $subject, $e->getMessage()), $e);
         }
 
-        if (200 !== $response->getStatusCode()) {
-            throw new LookupException(\sprintf('IPQuery returned status %d %s', $response->getStatusCode(), $subject));
+        $status = $response->getStatusCode();
+        if (200 !== $status) {
+            throw new LookupException(\sprintf('IPQuery returned status %d %s', $status, $subject), null, $status);
         }
 
         return (string) $response->getBody();
