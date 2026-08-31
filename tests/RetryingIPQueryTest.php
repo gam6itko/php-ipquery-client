@@ -141,6 +141,30 @@ final class RetryingIPQueryTest extends TestCase
         }
     }
 
+    public function testAppliesConstructorDefaults(): void
+    {
+        // No maxAttempts / baseDelayMs passed: exercise the constructor defaults
+        // (3 attempts, 100 ms base backoff) rather than makeSut()'s explicit values.
+        $inner = new SequenceLookup(
+            new LookupException('down', null, 503),
+            new LookupException('down', null, 503),
+            new LookupException('still down', null, 503),
+        );
+
+        $sut = new RetryingIPQuery($inner, sleep: $this->recordSleep());
+
+        $this->expectException(LookupException::class);
+
+        try {
+            $sut->lookup('8.8.8.8');
+        } finally {
+            // Default maxAttempts is 3 (a 4th call would exhaust the sequence).
+            self::assertSame(3, $inner->calls);
+            // Default baseDelayMs is 100: backoff of 100 ms then 200 ms, in microseconds.
+            self::assertSame([100_000, 200_000], $this->slept);
+        }
+    }
+
     public function testCustomRetryablePolicyIsHonored(): void
     {
         $result = self::ipQueryResult('FR');

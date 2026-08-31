@@ -179,14 +179,26 @@ final class IPQueryClientTest extends TestCase
         $client->lookup('8.8.8.8');
     }
 
-    public function testThrowsOnUnexpectedPayload(): void
+    #[DataProvider('dataUnexpectedPayload')]
+    public function testThrowsOnUnexpectedPayload(string $body): void
     {
-        $client = $this->makeClient(200, '{"ip":"8.8.8.8"}');
+        $client = $this->makeClient(200, $body);
 
         $this->expectException(LookupException::class);
         $this->expectExceptionMessage('IPQuery returned unexpected payload');
 
         $client->lookup('8.8.8.8');
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function dataUnexpectedPayload(): iterable
+    {
+        yield 'not an object'            => ['42'];
+        yield 'no location'             => ['{"ip":"8.8.8.8"}'];
+        yield 'location not an object'  => ['{"location":"RU"}'];
+        yield 'location without country_code' => ['{"location":{"city":"Moscow"}}'];
     }
 
     private function makeClient(int $status, string $body): IPQueryClient

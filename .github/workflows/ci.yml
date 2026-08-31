@@ -32,6 +32,25 @@ jobs:
       - name: Tests (phpunit)
         run: composer tests
 
+  mutation:
+    name: Mutation testing (infection)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: pcov
+          tools: composer:v2
+
+      - name: Install dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Mutation testing (infection)
+        run: composer infection
+
   static:
     name: Static analysis & code style
     runs-on: ubuntu-latest
