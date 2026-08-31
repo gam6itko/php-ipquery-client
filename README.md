@@ -95,6 +95,24 @@ $cached = new CachedIPQuery($client, $psr16Cache);
 $cached->lookup('8.8.8.8');
 ```
 
+### Retrying transient failures
+
+`RetryingIPQuery` decorates any `LookupInterface` and retries **transient** failures with
+exponential backoff — a transport error, a `5xx` status, or `429`. Deterministic failures
+(`InvalidIpException`, other `4xx`) fail fast and are never retried:
+
+```php
+use Gam6itko\IPQuery\RetryingIPQuery;
+
+$resilient = new RetryingIPQuery($client, maxAttempts: 3, baseDelayMs: 100);
+
+// Compose with the cache — retry the live call, then cache the successful result:
+$cached = new CachedIPQuery(new RetryingIPQuery($client), $psr16Cache);
+```
+
+Override which failures are retried via the `$retryable` callback
+(`\Closure(LookupException $e, int $attempt): bool`).
+
 ### Testing
 
 Use `IPQueryStub` as a test double — it returns a canned result or throws a given exception:
