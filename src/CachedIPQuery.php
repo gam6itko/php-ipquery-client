@@ -15,11 +15,11 @@ use Psr\SimpleCache\CacheInterface;
  *
  * @psalm-import-type TIPQueryResult from LookupInterface
  */
-final readonly class CachedIPQuery implements LookupInterface
+final class CachedIPQuery implements LookupInterface
 {
     public function __construct(
-        private LookupInterface $inner,
-        private CacheInterface $cache,
+        private readonly LookupInterface $inner,
+        private readonly CacheInterface $cache,
     ) {
     }
 
@@ -28,7 +28,6 @@ final readonly class CachedIPQuery implements LookupInterface
      *
      * @throws LookupException
      */
-    #[\Override]
     public function lookup(string $ip): array
     {
         $key = self::cacheKey($ip);

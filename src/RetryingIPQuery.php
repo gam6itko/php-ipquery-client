@@ -18,13 +18,13 @@ namespace Gam6itko\IPQuery;
  *
  * @psalm-import-type TIPQueryResult from LookupInterface
  */
-final readonly class RetryingIPQuery implements LookupInterface
+final class RetryingIPQuery implements LookupInterface
 {
     /** @var \Closure(LookupException, int): bool */
-    private \Closure $retryable;
+    private readonly \Closure $retryable;
 
     /** @var \Closure(int): void */
-    private \Closure $sleep;
+    private readonly \Closure $sleep;
 
     /**
      * @param int                                         $maxAttempts total number of attempts, including the first (1 disables retrying); must be >= 1
@@ -36,9 +36,9 @@ final readonly class RetryingIPQuery implements LookupInterface
      *                                                                 Injectable so tests need not sleep for real
      */
     public function __construct(
-        private LookupInterface $inner,
-        private int $maxAttempts = 3,
-        private int $baseDelayMs = 100,
+        private readonly LookupInterface $inner,
+        private readonly int $maxAttempts = 3,
+        private readonly int $baseDelayMs = 100,
         ?\Closure $retryable = null,
         ?\Closure $sleep = null,
     ) {
@@ -60,7 +60,6 @@ final readonly class RetryingIPQuery implements LookupInterface
      *
      * @throws LookupException the last failure once attempts are exhausted or the failure is not retryable
      */
-    #[\Override]
     public function lookup(string $ip): array
     {
         $attempt = 1;

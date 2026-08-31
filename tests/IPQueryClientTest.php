@@ -154,7 +154,6 @@ final class IPQueryClientTest extends TestCase
     public function testWrapsClientException(): void
     {
         $httpClient = new class implements ClientInterface {
-            #[\Override]
             public function sendRequest(RequestInterface $request): ResponseInterface
             {
                 throw new class('network is down') extends \RuntimeException implements ClientExceptionInterface {};

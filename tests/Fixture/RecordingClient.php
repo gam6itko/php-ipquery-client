@@ -21,7 +21,6 @@ final class RecordingClient implements ClientInterface
     ) {
     }
 
-    #[\Override]
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
         $this->lastRequest = $request;

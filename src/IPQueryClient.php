@@ -17,11 +17,11 @@ use Psr\Http\Message\RequestFactoryInterface;
  *
  * @psalm-import-type TIPQueryResult from LookupInterface
  */
-final readonly class IPQueryClient implements LookupInterface
+final class IPQueryClient implements LookupInterface
 {
     public function __construct(
-        private ClientInterface $httpClient,
-        private RequestFactoryInterface $requestFactory,
+        private readonly ClientInterface $httpClient,
+        private readonly RequestFactoryInterface $requestFactory,
     ) {
     }
 
@@ -31,7 +31,6 @@ final readonly class IPQueryClient implements LookupInterface
      * @throws InvalidIpException when $ip is not a valid IP address
      * @throws LookupException
      */
-    #[\Override]
     public function lookup(string $ip): array
     {
         if (false === \filter_var($ip, \FILTER_VALIDATE_IP)) {

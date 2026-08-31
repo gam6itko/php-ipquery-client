@@ -17,19 +17,18 @@ use Psr\Http\Message\UriFactoryInterface;
  *
  * @see IPQueryClient
  */
-final readonly class IPQueryRequestFactory implements RequestFactoryInterface
+final class IPQueryRequestFactory implements RequestFactoryInterface
 {
     /**
      * @param string $baseUri geo-service base address, e.g. `http://localhost:8080`
      */
     public function __construct(
-        private RequestFactoryInterface $requestFactory,
-        private UriFactoryInterface $uriFactory,
-        private string $baseUri = 'http://localhost:8080',
+        private readonly RequestFactoryInterface $requestFactory,
+        private readonly UriFactoryInterface $uriFactory,
+        private readonly string $baseUri = 'http://localhost:8080',
     ) {
     }
 
-    #[\Override]
     public function createRequest(string $method, $uri): RequestInterface
     {
         if (\is_string($uri)) {

@@ -33,7 +33,6 @@ final class SequenceLookup implements LookupInterface
      *
      * @throws LookupException
      */
-    #[\Override]
     public function lookup(string $ip): array
     {
         $outcome = $this->outcomes[$this->calls]
